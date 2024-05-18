@@ -1,5 +1,7 @@
 #!/usr/bin/env -S just --justfile
 
+set windows-shell := ["pwsh.exe", "-c"]
+
 _default:
   @just --list -u
 
@@ -140,3 +142,31 @@ upgrade:
 clone-submodule dir url sha:
   git clone --depth=1 {{url}} {{dir}} || true
   cd {{dir}} && git fetch origin {{sha}} && git reset --hard {{sha}}
+
+
+ecosystem_dir := "C:/source/ecosystem"
+oxlint_bin := "C:/source/rust/oxc/target/release/oxparse.exe"
+threads := "12"
+
+pgo_data_dir := "C:/source/rust/oxc/pgo-data"
+llvm_profdata_bin := "~/.rustup/toolchains/1.78.0-x86_64-pc-windows-msvc/lib/rustlib/x86_64-pc-windows-msvc/bin/llvm-profdata.exe"
+
+build-pgo:
+  just build-pgo-init
+  just oxlint_bin=C:/source/rust/oxc/target/x86_64-pc-windows-msvc/release/oxparse.exe ecosystem
+  {{llvm_profdata_bin}} merge -o {{pgo_data_dir}}/merged.profdata {{pgo_data_dir}}
+  just build-pgo-final
+
+build-pgo-init $RUSTFLAGS="-Cprofile-generate=C:/source/rust/oxc/pgo-data":
+  cargo build --release -p oxc_cli --bin oxparse --features allocator --target x86_64-pc-windows-msvc
+
+build-pgo-final $RUSTFLAGS="-Cprofile-use=C:/source/rust/oxc/pgo-data/merged.profdata -Cllvm-args=-pgo-warn-missing-function":
+  cargo build --release -p oxc_cli --bin oxparse --features allocator --target x86_64-pc-windows-msvc
+
+ecosystem:
+  cd "{{ecosystem_dir}}/DefinitelyTyped" && {{oxlint_bin}} --threads={{threads}}
+  cd "{{ecosystem_dir}}/affine" && {{oxlint_bin}} --threads={{threads}}
+  cd "{{ecosystem_dir}}/napi-rs" && {{oxlint_bin}} --threads={{threads}} --ignore-path=.oxlintignore
+  cd "{{ecosystem_dir}}/preact" && {{oxlint_bin}} --threads={{threads}} oxlint src test debug compat hooks test-utils
+  cd "{{ecosystem_dir}}/rolldown" && {{oxlint_bin}} --threads={{threads}} --ignore-path=.oxlintignore
+  cd "{{ecosystem_dir}}/vscode" && {{oxlint_bin}} --threads={{threads}}

@@ -29,6 +29,11 @@ path = "src/lint/main.rs"
 test = false
 
 [[bin]]
+name = "oxparse"
+path = "src/parse/main.rs"
+test = false
+
+[[bin]]
 name = "oxformat"
 path = "src/format/main.rs"
 test = false
