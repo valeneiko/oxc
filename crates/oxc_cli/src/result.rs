@@ -11,6 +11,7 @@ pub enum CliRunResult {
     PathNotFound { paths: Vec<PathBuf> },
     LintResult(LintResult),
     FormatResult(FormatResult),
+    ParseResult(ParseResult),
     TypeCheckResult { duration: Duration, number_of_diagnostics: usize },
 }
 
@@ -28,6 +29,13 @@ pub struct LintResult {
 
 #[derive(Debug)]
 pub struct FormatResult {
+    pub duration: Duration,
+    pub number_of_files: usize,
+}
+
+#[derive(Debug)]
+pub struct ParseResult {
+    pub parse_duration: Duration,
     pub duration: Duration,
     pub number_of_files: usize,
 }
@@ -92,6 +100,16 @@ impl Termination for CliRunResult {
                 let s = if number_of_files == 1 { "" } else { "s" };
                 println!(
                     "Finished in {time} on {number_of_files} file{s} using {threads} threads."
+                );
+                ExitCode::from(0)
+            }
+            Self::ParseResult(ParseResult { parse_duration, duration, number_of_files }) => {
+                let threads = rayon::current_num_threads();
+                let time = Self::get_execution_time(&duration);
+                let parse_time = Self::get_execution_time(&parse_duration);
+                let s = if number_of_files == 1 { "" } else { "s" };
+                println!(
+                    "Finished in {time} ({parse_time}) on {number_of_files} file{s} using {threads} threads."
                 );
                 ExitCode::from(0)
             }
